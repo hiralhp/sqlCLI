@@ -1,0 +1,52 @@
+{
+  "q_001": {
+    "sql": "SELECT g.Name AS Genre, SUM(il.UnitPrice * il.Quantity) AS TotalSales\nFROM Genre g\nJOIN Track t ON t.GenreId = g.GenreId\nJOIN InvoiceLine il ON il.TrackId = t.TrackId\nGROUP BY g.GenreId, g.Name\nORDER BY TotalSales DESC\nLIMIT 5;",
+    "answer": "Genre: Rock, TotalSales: 826.65; Genre: Latin, TotalSales: 382.14; Genre: Metal, TotalSales: 261.36; Genre: Alternative & Punk, TotalSales: 241.56; Genre: TV Shows, TotalSales: 93.53",
+    "latency_s": 3.009
+  },
+  "q_002": {
+    "sql": "SELECT Album.Title\nFROM Album\nJOIN Artist ON Album.ArtistId = Artist.ArtistId\nWHERE Artist.Name = 'AC/DC';",
+    "answer": "Title: For Those About To Rock We Salute You; Title: Let There Be Rock",
+    "latency_s": 0.768
+  },
+  "q_003": {
+    "sql": "SELECT FirstName, LastName, Email\nFROM Customer\nWHERE Country = 'Brazil';",
+    "answer": "FirstName: Lu\u00eds, LastName: Gon\u00e7alves, Email: luisg@embraer.com.br; FirstName: Eduardo, LastName: Martins, Email: eduardo@woodstock.com.br; FirstName: Alexandre, LastName: Rocha, Email: alero@uol.com.br; FirstName: Roberto, LastName: Almeida, Email: roberto.almeida@riotur.gov.br; FirstName: Fernanda, LastName: Ramos, Email: fernadaramos4@uol.com.br",
+    "latency_s": 0.542
+  },
+  "q_004": {
+    "sql": "SELECT mt.Name, COUNT(t.TrackId) AS TrackCount\nFROM MediaType mt\nJOIN Track t ON t.MediaTypeId = mt.MediaTypeId\nGROUP BY mt.MediaTypeId, mt.Name\nORDER BY TrackCount DESC\nLIMIT 1;",
+    "answer": "Name: MPEG audio file, TrackCount: 3034",
+    "latency_s": 0.786
+  },
+  "q_005": {
+    "sql": "SELECT e.EmployeeId, e.FirstName, e.LastName, COUNT(c.CustomerId) AS CustomerCount\nFROM Employee e\nJOIN Customer c ON c.SupportRepId = e.EmployeeId\nGROUP BY e.EmployeeId\nORDER BY CustomerCount DESC\nLIMIT 1;",
+    "answer": "EmployeeId: 3, FirstName: Jane, LastName: Peacock, CustomerCount: 21",
+    "latency_s": 0.899
+  },
+  "q_006": {
+    "sql": "SELECT p.PlaylistId,\n       p.Name,\n       COUNT(pt.TrackId) AS TrackCount\nFROM Playlist AS p\nLEFT JOIN PlaylistTrack AS pt ON p.PlaylistId = pt.PlaylistId\nGROUP BY p.PlaylistId, p.Name\nORDER BY p.PlaylistId;",
+    "answer": "PlaylistId: 1, Name: Music, TrackCount: 3290; PlaylistId: 2, Name: Movies, TrackCount: 0; PlaylistId: 3, Name: TV Shows, TrackCount: 213; PlaylistId: 4, Name: Audiobooks, TrackCount: 0; PlaylistId: 5, Name: 90\u2019s Music, TrackCount: 1477 ... (+13 more rows)",
+    "latency_s": 1.25
+  },
+  "q_007": {
+    "sql": "SELECT SUM(Total) AS TotalRevenue2021\nFROM Invoice\nWHERE strftime('%Y', InvoiceDate) = '2021';",
+    "answer": "TotalRevenue2021: 449.46",
+    "latency_s": 0.637
+  },
+  "q_008": {
+    "sql": "SELECT BillingCountry, AVG(Total) AS AverageTotal\nFROM Invoice\nGROUP BY BillingCountry\nORDER BY AverageTotal DESC;",
+    "answer": "BillingCountry: Chile, AverageTotal: 6.659999999999999; BillingCountry: Ireland, AverageTotal: 6.517142857142857; BillingCountry: Hungary, AverageTotal: 6.517142857142857; BillingCountry: Czech Republic, AverageTotal: 6.445714285714286; BillingCountry: Austria, AverageTotal: 6.088571428571428 ... (+19 more rows)",
+    "latency_s": 2.078
+  },
+  "q_009": {
+    "sql": "SELECT \n    CustomerId,\n    FirstName,\n    LastName,\n    TotalSpending,\n    RANK() OVER (ORDER BY TotalSpending DESC) AS SpendingRank\nFROM (\n    SELECT \n        c.CustomerId,\n        c.FirstName,\n        c.LastName,\n        SUM(i.Total) AS TotalSpending\n    FROM Customer c\n    JOIN Invoice i ON c.CustomerId = i.CustomerId\n    GROUP BY c.CustomerId, c.FirstName, c.LastName\n) \nORDER BY TotalSpending DESC\nLIMIT 5;",
+    "answer": "CustomerId: 6, FirstName: Helena, LastName: Hol\u00fd, TotalSpending: 49.62, SpendingRank: 1; CustomerId: 26, FirstName: Richard, LastName: Cunningham, TotalSpending: 47.62, SpendingRank: 2; CustomerId: 57, FirstName: Luis, LastName: Rojas, TotalSpending: 46.62, SpendingRank: 3; CustomerId: 45, FirstName: Ladislav, LastName: Kov\u00e1cs, TotalSpending: 45.62, SpendingRank: 4; CustomerId: 46, FirstName: Hugh, LastName: O'Reilly, TotalSpending: 45.62, SpendingRank: 4",
+    "latency_s": 13.021
+  },
+  "q_010": {
+    "sql": "SELECT ar.Name AS ArtistName, COUNT(DISTINCT t.GenreId) AS GenreCount\nFROM Artist ar\nJOIN Album al ON al.ArtistId = ar.ArtistId\nJOIN Track t ON t.AlbumId = al.AlbumId\nWHERE t.GenreId IS NOT NULL\nGROUP BY ar.ArtistId, ar.Name\nHAVING COUNT(DISTINCT t.GenreId) > 3\nORDER BY GenreCount DESC, ArtistName;",
+    "answer": "ArtistName: Iron Maiden, GenreCount: 4",
+    "latency_s": 1.251
+  }
+}
