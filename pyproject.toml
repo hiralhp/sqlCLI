@@ -3,7 +3,7 @@ name = "fireworks-text-to-sql-takehome"
 version = "0.1.0"
 description = "FireworksAI Text-to-SQL Take-Home Assessment"
 requires-python = ">=3.11"
-dependencies = ["openai", "ipython", "pandas", "pydantic", "python-dotenv"]
+dependencies = ["openai", "ipython", "pandas", "pydantic", "python-dotenv", "sqlglot"]
 
 [project.scripts]
 cli = "src.cli:main"

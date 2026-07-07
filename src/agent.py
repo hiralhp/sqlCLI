@@ -6,6 +6,9 @@ import sqlite3
 import time
 from typing import Optional
 
+import sqlglot
+from sqlglot import exp as sql_exp
+
 from openai import OpenAI, RateLimitError
 
 from src.utils import get_schema, query_db
@@ -112,7 +115,13 @@ class TextToSQLAgent:
                     temperature=0,
                     max_tokens=512,
                 )
-                return response.choices[0].message.content.strip()
+                content = response.choices[0].message.content
+                if not content or not content.strip():
+                    raise ValueError(
+                        "The model could not generate valid SQL. "
+                        "Please try rephrasing your question."
+                    )
+                return content.strip()
             except RateLimitError:
                 if attempt >= _retries:
                     raise
@@ -126,9 +135,24 @@ class TextToSQLAgent:
         raw = raw.replace("```", "").strip()
         return raw
 
-    def _is_select(self, sql: str) -> bool:
-        tokens = sql.strip().split()
-        return bool(tokens) and tokens[0].upper() == "SELECT"
+    def _is_safe_query(self, sql: str) -> bool:
+        # sqlglot is used instead of a hand-rolled tokenizer because correctly
+        # handling quoted identifiers, block comments, string literals, and nested
+        # parentheses is non-trivial. A naive first-token check would reject valid
+        # CTEs (WITH ... SELECT) and could be fooled by edge-case syntax.
+        #
+        # In sqlglot, both plain SELECT and WITH...SELECT (CTEs) parse to
+        # exp.Select — the CTE becomes an attribute of the Select node — so a
+        # single isinstance check covers both cases. Anything else (INSERT,
+        # UPDATE, DELETE, DROP, CREATE, PRAGMA, …) parses to a different node
+        # type and is rejected.
+        #
+        # If sqlglot cannot parse the input at all, we reject it to stay safe.
+        try:
+            stmt = sqlglot.parse_one(sql, dialect="sqlite")
+        except Exception:
+            return False
+        return isinstance(stmt, sql_exp.Select)
 
     def _build_messages(self, user_text: str) -> list[dict]:
         system_msg = {"role": "system", "content": self._system_prompt}
@@ -152,7 +176,7 @@ class TextToSQLAgent:
         raw = self._call_llm(messages)
         sql = self._clean_sql(raw)
 
-        if not self._is_select(sql):
+        if not self._is_safe_query(sql):
             raise ValueError(
                 f"Model returned a non-SELECT statement — refusing to execute.\nSQL: {sql}"
             )
@@ -188,7 +212,7 @@ class TextToSQLAgent:
                 raw = self._call_llm(repair_messages)
                 sql = self._clean_sql(raw)
 
-                if not self._is_select(sql):
+                if not self._is_safe_query(sql):
                     raise ValueError(
                         f"Repaired query is not a SELECT statement.\nSQL: {sql}"
                     )
