@@ -8,6 +8,7 @@ dependencies = ["openai", "ipython", "pandas", "pydantic", "python-dotenv", "sql
 [project.scripts]
 cli = "src.cli:main"
 eval = "src.eval:main"
+regression = "src.regression:main"
 
 [build-system]
 requires = ["hatchling"]

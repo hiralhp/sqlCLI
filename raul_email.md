@@ -8,6 +8,8 @@ To improve on the baseline prompt, I grounded the model with the full database s
 
 For validation, I ran the agent against all 10 provided development questions and compared the outputs against the supplied gold answers. The implementation produced correct results on all 10 questions across the three evaluation tiers, based on comparison with the provided gold answers. Most queries completed in under 3 seconds, with one slower run caused by a transient API rate limit that was automatically recovered through exponential backoff and retry.
 
+Beyond the provided evaluation set, I also tested edge cases including empty questions, queries that return no results, multi-turn follow-ups, and adversarial inputs designed to trigger write operations. This surfaced two bugs I fixed before submission: the safety guard was incorrectly rejecting valid read-only CTEs (WITH...SELECT queries) because it only checked the first token, and the agent crashed with an AttributeError when the model returned an empty response. I replaced the first-token check with a sqlglot-based parser that correctly identifies the statement type regardless of syntax, and added graceful handling for empty model responses.
+
 If I were continuing this toward production, my next priorities would be:
 
 - Replace full-schema prompting with schema retrieval for larger customer databases.

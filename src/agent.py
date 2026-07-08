@@ -24,9 +24,11 @@ Convert natural language questions into valid SQLite SELECT queries.
 RULES:
 - Output ONLY the raw SQL query — no markdown, no code fences, no explanation.
 - Only generate SELECT statements. Never use INSERT, UPDATE, DELETE, DROP, CREATE, or any DDL/DML.
+- CTEs (WITH ... SELECT ...) are allowed and preferred for multi-step computations such as ranking over aggregates.
 - Use only the exact table and column names listed in the schema below. Never invent names.
 - Use standard SQLite syntax (e.g. strftime('%Y', date_col) for year extraction).
 - Always terminate the query with a semicolon.
+- SQLite does not allow column aliases from the same SELECT to be referenced inside OVER clauses. For window functions over aggregates, use a CTE or repeat the full expression (e.g. RANK() OVER (ORDER BY SUM(col) DESC), not RANK() OVER (ORDER BY alias DESC)).
 
 DATABASE SCHEMA:
 {schema}
@@ -113,8 +115,13 @@ class TextToSQLAgent:
                     model=self.model,
                     messages=messages,
                     temperature=0,
-                    max_tokens=512,
+                    max_tokens=1024,
                 )
+                if not response.choices:
+                    raise ValueError(
+                        "The model could not generate valid SQL. "
+                        "Please try rephrasing your question."
+                    )
                 content = response.choices[0].message.content
                 if not content or not content.strip():
                     raise ValueError(
@@ -152,7 +159,15 @@ class TextToSQLAgent:
             stmt = sqlglot.parse_one(sql, dialect="sqlite")
         except Exception:
             return False
-        return isinstance(stmt, sql_exp.Select)
+        # Plain SELECT → exp.Select.
+        if isinstance(stmt, sql_exp.Select):
+            return True
+        # WITH...SELECT (CTEs) → exp.With whose .this is exp.Select.
+        # Also guard against WITH...INSERT / WITH...DELETE which are exp.With
+        # wrapping a non-Select body — those are still rejected.
+        if isinstance(stmt, sql_exp.With):
+            return isinstance(stmt.this, sql_exp.Select)
+        return False
 
     def _build_messages(self, user_text: str) -> list[dict]:
         system_msg = {"role": "system", "content": self._system_prompt}
