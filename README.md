@@ -6,22 +6,39 @@ the OpenAI-compatible Python SDK.
 
 ---
 
-## Setup
+## Features
 
-**Install dependencies**
+- Interactive CLI with conversational follow-up questions
+- Automatic SQL repair using SQLite error feedback
+- Read-only SQL enforcement with sqlglot-based statement validation
+- Conversation history with bounded rolling context (last 5 exchanges)
+- Batch evaluation against the provided 10-question development set
+- Exponential backoff for Fireworks API rate limits
+
+---
+
+## Requirements
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/)
+- Fireworks AI API key
+
+---
+
+## Setup
 
 ```bash
 uv sync
 ```
 
-**Create `.env`**
+Create a `.env` file in the project root:
 
 ```
-FIREWORKS_API_KEY=...
-FIREWORKS_MODEL=...
+FIREWORKS_API_KEY=your_key_here
+FIREWORKS_MODEL=accounts/fireworks/models/qwen3-235b-a22b-instruct-2507
 ```
 
-`FIREWORKS_MODEL` is optional — defaults to `accounts/fireworks/models/qwen3-235b-a22b-instruct-2507`.
+`FIREWORKS_MODEL` is optional — the value above is the default.
 
 ---
 
@@ -31,7 +48,8 @@ FIREWORKS_MODEL=...
 uv run cli
 ```
 
-Type a natural language question at the prompt. Type `exit` or `quit` to end the session.
+Type a natural language question at the prompt. Use `/help` to see example
+questions and available commands. Type `exit` or `quit` to end the session.
 
 ---
 
@@ -46,16 +64,32 @@ Runs all 10 questions from `data/dev_questions.json` and writes:
 - `data/dev_answers.json` — submission format (`sql` + `answer` per question)
 - `data/dev_answers_detailed.json` — same, plus `latency_s` per question
 
+To compare against gold-standard SQL and expected results, see
+`data/dev_questions_with_answers.json`.
+
+---
+
+## Run regression tests
+
+```bash
+uv run regression
+```
+
+Runs a suite of edge case tests covering prompt injection, destructive SQL
+requests, empty-result queries, multi-turn conversation memory,
+window-function and ranking queries, and SQL repair scenarios.
+
 ---
 
 ## Architecture
 
 ```
 src/
-├── agent.py   # TextToSQLAgent — LLM calls, schema injection, retry loop
-├── cli.py     # REPL: reads input, calls agent.ask(), prints SQL + ASCII table
-├── eval.py    # Batch runner: loops over dev questions, writes JSON output
-└── utils.py   # DB helpers: load_db, query_db, get_schema
+├── agent.py      # TextToSQLAgent — LLM calls, schema injection, safety guard, retry loop
+├── cli.py        # REPL: reads input, calls agent.ask(), prints SQL + ASCII table
+├── eval.py       # Batch runner: loops over dev questions, writes JSON output
+├── regression.py # Edge case regression suite
+└── utils.py      # DB helpers: load_db, query_db, get_schema
 ```
 
 `TextToSQLAgent` is the core. It owns the OpenAI client (pointed at Fireworks),
@@ -74,9 +108,12 @@ every API call. It has two parts:
 ```
 - Output ONLY the raw SQL query — no markdown, no code fences, no explanation.
 - Only generate SELECT statements. Never use INSERT, UPDATE, DELETE, DROP, CREATE, or any DDL/DML.
+- CTEs (WITH ... SELECT ...) are allowed and preferred for multi-step computations such as ranking over aggregates.
 - Use only the exact table and column names listed in the schema below. Never invent names.
 - Use standard SQLite syntax (e.g. strftime('%Y', date_col) for year extraction).
 - Always terminate the query with a semicolon.
+- SQLite does not allow column aliases from the same SELECT to be referenced inside OVER clauses.
+  Use a CTE or repeat the full expression (e.g. RANK() OVER (ORDER BY SUM(col) DESC)).
 ```
 
 **Schema** — every table rendered as a `CREATE TABLE` statement with column
@@ -93,8 +130,8 @@ CREATE TABLE Invoice (
 );
 ```
 
-Temperature is set to `0` and `max_tokens` to `512` to keep output deterministic
-and constrained to SQL only.
+Temperature is set to `0` and `max_tokens` to `1024` to keep output
+deterministic and to accommodate complex multi-CTE queries.
 
 ---
 
@@ -104,10 +141,11 @@ and constrained to SQL only.
 
 **SQL repair loop** (`max_retries=2`, i.e. up to 3 total attempts)
 
-1. Call the LLM, clean markdown fences from the response, check the first token
-   is `SELECT` — reject anything else before touching the database.
-2. Execute the query. If it succeeds, return `(sql, rows)`.
-3. If `sqlite3.Error` is raised, send the broken SQL and the error message back
+1. Call the LLM and strip any markdown fences from the response.
+2. Validate the parsed statement is read-only using sqlglot — unsafe statements
+   (INSERT, UPDATE, DELETE, DROP, etc.) are rejected before touching the database.
+3. Execute the query. If it succeeds, return `(sql, rows)`.
+4. If `sqlite3.Error` is raised, send the broken SQL and the error message back
    to the model with a targeted repair prompt:
 
    ```
@@ -120,8 +158,8 @@ and constrained to SQL only.
    Output only the corrected SQL query.
    ```
 
-4. Clean and validate the repaired query, then retry execution. Repeat up to
-   `max_retries` times. If all attempts fail, raise the last `sqlite3.Error`.
+5. Validate and re-execute the repaired query. Repeat up to `max_retries` times.
+   If all attempts fail, raise the last `sqlite3.Error`.
 
 **Rate-limit backoff** (inside `_call_llm`, 3 retries)
 
@@ -148,9 +186,9 @@ self.history.append({"role": "user",      "content": question})
 self.history.append({"role": "assistant", "content": sql})
 ```
 
-The window is capped at the last 10 messages (5 exchanges) to keep the context
-size bounded. Failed queries are not appended — the history only records
-successful turns.
+The window is capped at the last 10 messages (5 exchanges) to keep context
+size bounded. Failed queries are not appended — history only records successful
+turns.
 
 `reset_history()` clears the list. The eval script calls this between questions
 so each is answered independently with no context leakage.
@@ -175,44 +213,46 @@ For each question the script:
 3. Calls `agent.reset_history()` before the next question.
 4. Sleeps 1 second between questions to stay within API rate limits.
 
-Output is written to two files:
-
-- **`dev_answers.json`** — `{ "<id>": { "sql": "...", "answer": "..." }, ... }` —
-  matches the submission format in `dev_answers_example.json`.
-- **`dev_answers_detailed.json`** — same structure plus `"latency_s"` per entry.
-
-To compare against gold-standard SQL and expected results, see
-`data/dev_questions_with_answers.json`.
-
 ---
 
 ## Results
 
-- **10/10** dev questions answered correctly across all three tiers.
-- Most queries complete in **under 3 seconds** end-to-end (LLM call + execution).
-- One question triggered Fireworks rate limiting mid-run; the exponential backoff
-  in `_call_llm` recovered automatically with no failure surfaced to the caller.
+- All 10 development questions passed across all three tiers.
+- Most questions completed in under 3 seconds end-to-end (LLM call + SQL execution).
+- The exponential backoff in `_call_llm` recovered from one Fireworks rate-limit
+  event automatically, with no failure surfaced to the caller.
 
 ---
 
 ## Limitations
 
-**SQLite only** — the schema builder and query executor use SQLite-specific
-pragmas (`PRAGMA table_info`, `PRAGMA foreign_key_list`) and SQLite syntax
-assumptions baked into the system prompt. Switching databases requires changes
-in both `utils.py` and the prompt.
+**SQLite only** — the schema builder uses SQLite-specific pragmas
+(`PRAGMA table_info`, `PRAGMA foreign_key_list`) and the system prompt includes
+SQLite syntax guidance. Supporting other databases requires changes to both
+`utils.py` and the prompt.
 
-**SELECT only** — every generated query is checked with a first-token guard.
-Anything that is not a `SELECT` statement is rejected outright. There is no
-deeper parse; a malformed query that starts with `SELECT` but contains embedded
-DDL would pass the guard and fail at execution time (triggering the repair loop).
+**Parser-based read-only validation, not database-level enforcement** — generated
+SQL is validated with sqlglot to ensure it is a read-only statement before
+execution. However, there is no database-level read-only permission enforced on
+the connection, no query cost limit, and no `EXPLAIN` dry-run. Invalid queries
+that pass validation are caught when SQLite raises an error, at which point the
+repair loop activates.
 
-**Simple follow-up memory** — conversation history is a flat rolling window of
-the last 5 exchanges (10 messages). There is no summarization, no entity
-tracking, and no semantic retrieval. Long sessions or questions that depend on
-context older than 5 turns will lose that context silently.
+**Bounded follow-up memory** — conversation history is a flat rolling window of
+the last 5 exchanges (10 messages). There is no summarization, entity tracking,
+or semantic retrieval. Context older than 5 turns is silently dropped.
 
-**Simple SQL validation** — the only pre-execution check is the `SELECT` token
-guard. There is no syntax validation, no schema-name verification, and no
-`EXPLAIN` dry-run before executing. Invalid queries are caught only when
-SQLite raises an error, at which point the repair loop activates.
+**Full-schema prompting** — the entire database schema is injected into every
+request. This works well for Chinook but does not scale to large production
+schemas with hundreds of tables.
+
+---
+
+## Future improvements
+
+- Retrieve only relevant tables instead of injecting the full schema on every request.
+- Enforce read-only access at both the parser and database connection permission layers.
+- Add execution-based regression testing against larger, customer-specific schemas.
+- Stream responses for improved CLI responsiveness on longer queries.
+- Cache schema metadata to avoid rebuilding it on each agent restart.
+- Consider extending beyond SQLite to PostgreSQL and MySQL.
