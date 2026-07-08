@@ -10,11 +10,26 @@ load_dotenv()  # load .env before importing agent (which reads env vars at init)
 from src.agent import TextToSQLAgent
 from src.utils import load_db
 
+_HELP_TEXT = """
+Commands:
+  /help   Show this message
+  /reset  Clear conversation history and start a fresh session
+  exit    Quit the CLI
+  quit    Quit the CLI
+
+Example questions:
+  What are the top 5 best-selling genres?
+  Which artist has sold the most tracks?
+  Show total revenue by country, ordered from highest to lowest.
+
+Tip: follow-up questions are supported — the agent remembers the last 5 exchanges.
+"""
+
 
 def _print_results(results: list[dict]) -> None:
     """Render a list-of-dicts as a plain ASCII table."""
     if not results:
-        print("(no rows returned)\n")
+        print("Query ran successfully but returned no rows.\n")
         return
 
     columns = list(results[0].keys())
@@ -56,7 +71,8 @@ def main() -> None:
 
     model_short = agent.model.split("/")[-1]
     print(f"Text-to-SQL CLI  |  db: {db_path}  |  model: {model_short}")
-    print("Type a natural language question, or 'exit' / 'quit' to leave.\n")
+    print("Ask a question in plain English. Type /help for examples, or exit to quit.")
+    print("Follow-up questions are supported — the agent remembers recent context.\n")
 
     while True:
         try:
@@ -72,12 +88,21 @@ def main() -> None:
             print("Goodbye.")
             break
 
+        if question.lower() == "/help":
+            print(_HELP_TEXT)
+            continue
+
+        if question.lower() == "/reset":
+            agent.reset_history()
+            print("Context cleared. Starting a fresh session.\n")
+            continue
+
         try:
             sql, results = agent.ask(question)
             print(f"\nSQL:\n{sql}\n")
             _print_results(results)
         except Exception as exc:
-            print(f"Error: {exc}\n")
+            print(f"Something went wrong: {exc}\n")
 
 
 if __name__ == "__main__":
