@@ -1,10 +1,10 @@
 {
   "q_001": {
-    "sql": "SELECT g.Name AS Genre,\n       SUM(il.UnitPrice * il.Quantity) AS TotalSales\nFROM InvoiceLine il\nJOIN Track t ON il.TrackId = t.TrackId\nJOIN Genre g ON t.GenreId = g.GenreId\nGROUP BY g.GenreId, g.Name\nORDER BY TotalSales DESC\nLIMIT 5;",
+    "sql": "SELECT g.Name AS Genre, SUM(il.UnitPrice * il.Quantity) AS TotalSales\nFROM InvoiceLine il\nJOIN Track t ON il.TrackId = t.TrackId\nJOIN Genre g ON t.GenreId = g.GenreId\nGROUP BY g.GenreId, g.Name\nORDER BY TotalSales DESC\nLIMIT 5;",
     "answer": "Genre: Rock, TotalSales: 826.65; Genre: Latin, TotalSales: 382.14; Genre: Metal, TotalSales: 261.36; Genre: Alternative & Punk, TotalSales: 241.56; Genre: TV Shows, TotalSales: 93.53"
   },
   "q_002": {
-    "sql": "SELECT Album.Title\nFROM Album\nJOIN Artist ON Album.ArtistId = Artist.ArtistId\nWHERE Artist.Name = 'AC/DC';",
+    "sql": "SELECT Album.Title\nFROM Album\nJOIN Artist ON Album.ArtistId = Artist.ArtistId\nWHERE Artist.Name = 'AC/DC'\nORDER BY Album.Title;",
     "answer": "Title: For Those About To Rock We Salute You; Title: Let There Be Rock"
   },
   "q_003": {
@@ -12,7 +12,7 @@
     "answer": "FirstName: Lu\u00eds, LastName: Gon\u00e7alves, Email: luisg@embraer.com.br; FirstName: Eduardo, LastName: Martins, Email: eduardo@woodstock.com.br; FirstName: Alexandre, LastName: Rocha, Email: alero@uol.com.br; FirstName: Roberto, LastName: Almeida, Email: roberto.almeida@riotur.gov.br; FirstName: Fernanda, LastName: Ramos, Email: fernadaramos4@uol.com.br"
   },
   "q_004": {
-    "sql": "SELECT mt.Name, COUNT(*) AS TrackCount\nFROM Track t\nJOIN MediaType mt ON t.MediaTypeId = mt.MediaTypeId\nGROUP BY mt.MediaTypeId\nORDER BY TrackCount DESC\nLIMIT 1;",
+    "sql": "SELECT MediaType.Name, COUNT(*) AS TrackCount\nFROM Track\nJOIN MediaType ON Track.MediaTypeId = MediaType.MediaTypeId\nGROUP BY MediaType.MediaTypeId\nORDER BY TrackCount DESC\nLIMIT 1;",
     "answer": "Name: MPEG audio file, TrackCount: 3034"
   },
   "q_005": {
@@ -20,12 +20,12 @@
     "answer": "EmployeeId: 3, FirstName: Jane, LastName: Peacock, CustomerCount: 21"
   },
   "q_006": {
-    "sql": "SELECT \n    p.PlaylistId,\n    p.Name,\n    COUNT(pt.TrackId) AS TrackCount\nFROM \n    Playlist AS p\nLEFT JOIN \n    PlaylistTrack AS pt\n    ON p.PlaylistId = pt.PlaylistId\nGROUP BY \n    p.PlaylistId,\n    p.Name\nORDER BY \n    p.PlaylistId;",
+    "sql": "SELECT\n    p.PlaylistId,\n    p.Name,\n    COUNT(pt.TrackId) AS TrackCount\nFROM\n    Playlist AS p\nLEFT JOIN\n    PlaylistTrack AS pt\n    ON p.PlaylistId = pt.PlaylistId\nGROUP BY\n    p.PlaylistId,\n    p.Name\nORDER BY\n    p.PlaylistId;",
     "answer": "PlaylistId: 1, Name: Music, TrackCount: 3290; PlaylistId: 2, Name: Movies, TrackCount: 0; PlaylistId: 3, Name: TV Shows, TrackCount: 213; PlaylistId: 4, Name: Audiobooks, TrackCount: 0; PlaylistId: 5, Name: 90\u2019s Music, TrackCount: 1477 ... (+13 more rows)"
   },
   "q_007": {
-    "sql": "SELECT SUM(Total) AS TotalRevenue2021\nFROM Invoice\nWHERE strftime('%Y', InvoiceDate) = '2021';",
-    "answer": "TotalRevenue2021: 449.46"
+    "sql": "SELECT SUM(Total) AS TotalRevenue\nFROM Invoice\nWHERE strftime('%Y', InvoiceDate) = '2021';",
+    "answer": "TotalRevenue: 449.46"
   },
   "q_008": {
     "sql": "SELECT BillingCountry, AVG(Total) AS AvgTotal\nFROM Invoice\nGROUP BY BillingCountry\nORDER BY AvgTotal DESC;",
@@ -36,7 +36,7 @@
     "answer": "CustomerId: 6, FirstName: Helena, LastName: Hol\u00fd, TotalSpending: 49.62, SpendingRank: 1; CustomerId: 26, FirstName: Richard, LastName: Cunningham, TotalSpending: 47.62, SpendingRank: 2; CustomerId: 57, FirstName: Luis, LastName: Rojas, TotalSpending: 46.62, SpendingRank: 3; CustomerId: 45, FirstName: Ladislav, LastName: Kov\u00e1cs, TotalSpending: 45.62, SpendingRank: 4; CustomerId: 46, FirstName: Hugh, LastName: O'Reilly, TotalSpending: 45.62, SpendingRank: 4"
   },
   "q_010": {
-    "sql": "SELECT ar.Name, sub.GenreCount\nFROM (\n    SELECT a.ArtistId, COUNT(DISTINCT t.GenreId) AS GenreCount\n    FROM Track t\n    JOIN Album al ON t.AlbumId = al.AlbumId\n    JOIN Artist a ON al.ArtistId = a.ArtistId\n    WHERE t.GenreId IS NOT NULL\n    GROUP BY a.ArtistId\n    HAVING COUNT(DISTINCT t.GenreId) > 3\n) sub\nJOIN Artist ar ON sub.ArtistId = ar.ArtistId\nORDER BY sub.GenreCount DESC;",
-    "answer": "Name: Iron Maiden, GenreCount: 4"
+    "sql": "SELECT a.Name, COUNT(DISTINCT t.GenreId) AS genre_count\nFROM Artist a\nJOIN Album al ON al.ArtistId = a.ArtistId\nJOIN Track t ON t.AlbumId = al.AlbumId\nWHERE t.GenreId IS NOT NULL\nGROUP BY a.ArtistId, a.Name\nHAVING COUNT(DISTINCT t.GenreId) > 3\nORDER BY genre_count DESC, a.Name;",
+    "answer": "Name: Iron Maiden, genre_count: 4"
   }
 }

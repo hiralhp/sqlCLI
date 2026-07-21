@@ -8,13 +8,15 @@ from dotenv import load_dotenv
 load_dotenv()  # load .env before importing agent (which reads env vars at init)
 
 from src.agent import TextToSQLAgent
-from src.utils import load_db
+from src.utils import load_db, print_table_schema
 
 _HELP_TEXT = """
 Commands:
-  /help   Show this message
-  /reset  Clear conversation history and start a fresh session
-  exit    Quit the CLI
+  /help          Show this message
+  /schema        Show the full database schema
+  /schema <table> Show schema for a specific table
+  /reset         Clear conversation history and start a fresh session
+  exit           Quit the CLI
   quit    Quit the CLI
 
 Example questions:
@@ -95,6 +97,12 @@ def main() -> None:
         if question.lower() == "/reset":
             agent.reset_history()
             print("Context cleared. Starting a fresh session.\n")
+            continue
+
+        if question.lower() == "/schema" or question.lower().startswith("/schema "):
+            parts = question.split(maxsplit=1)
+            table = parts[1] if len(parts) > 1 else None
+            print_table_schema(conn, table)
             continue
 
         try:

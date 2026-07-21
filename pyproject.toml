@@ -9,6 +9,7 @@ dependencies = ["openai", "ipython", "pandas", "pydantic", "python-dotenv", "sql
 cli = "src.cli:main"
 eval = "src.eval:main"
 regression = "src.regression:main"
+benchmark = "src.benchmark:main"
 
 [build-system]
 requires = ["hatchling"]
