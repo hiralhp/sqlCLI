@@ -1,0 +1,18 @@
+[
+  {"id": "live_001", "question": "How many tracks are in the 'Rock' genre?", "tier": 1},
+  {"id": "live_002", "question": "What is the total revenue for each customer support representative?", "tier": 2},
+  {"id": "live_003", "question": "Which album has the most tracks, and how many tracks does it have?", "tier": 2},
+  {"id": "live_004", "question": "For each genre, what is the average track length in milliseconds?", "tier": 2},
+  {"id": "live_005", "question": "Which artists have no albums in the database?", "tier": 3},
+  {"id": "live_006", "question": "What is the total revenue per month in 2021, and which month had the highest revenue?", "tier": 3},
+  {"id": "live_007", "question": "How does the average invoice total differ between customers from the USA and customers from Canada?", "tier": 2},
+  {"id": "live_008", "question": "Which playlist has the most unique tracks, and how many?", "tier": 3},
+  {"id": "live_009", "question": "Which artists have tracks in the 'Jazz' genre but no tracks in the 'Rock' genre?", "tier": 3},
+  {"id": "live_010", "question": "For each customer, list their top 3 genres by total spending", "tier": 3},
+  {"id": "live_011", "question": "Which playlists contain tracks from more than 5 different artists?", "tier": 2},
+  {"id": "live_012", "question": "Total revenue by artist, including artists with $0 revenue", "tier": 3},
+  {"id": "live_013", "question": "Which customers have purchased tracks from every genre that 'AC/DC' has tracks in?", "tier": 3},
+  {"id": "live_014", "question": "What is the month-over-month revenue growth rate for 2021?", "tier": 3},
+  {"id": "live_015", "question": "Which support representative has the highest average invoice value for customers in their territory?", "tier": 2},
+  {"id": "live_016", "question": "Which tracks appear in more playlists than the average track?", "tier": 3}
+]

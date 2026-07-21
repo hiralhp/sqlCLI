@@ -4,7 +4,7 @@
     "answer": "Genre: Rock, TotalSales: 826.65; Genre: Latin, TotalSales: 382.14; Genre: Metal, TotalSales: 261.36; Genre: Alternative & Punk, TotalSales: 241.56; Genre: TV Shows, TotalSales: 93.53"
   },
   "q_002": {
-    "sql": "SELECT Album.Title\nFROM Album\nJOIN Artist ON Album.ArtistId = Artist.ArtistId\nWHERE Artist.Name = 'AC/DC'\nORDER BY Album.Title;",
+    "sql": "SELECT Album.Title\nFROM Album\nJOIN Artist ON Album.ArtistId = Artist.ArtistId\nWHERE Artist.Name = 'AC/DC';",
     "answer": "Title: For Those About To Rock We Salute You; Title: Let There Be Rock"
   },
   "q_003": {
@@ -12,7 +12,7 @@
     "answer": "FirstName: Lu\u00eds, LastName: Gon\u00e7alves, Email: luisg@embraer.com.br; FirstName: Eduardo, LastName: Martins, Email: eduardo@woodstock.com.br; FirstName: Alexandre, LastName: Rocha, Email: alero@uol.com.br; FirstName: Roberto, LastName: Almeida, Email: roberto.almeida@riotur.gov.br; FirstName: Fernanda, LastName: Ramos, Email: fernadaramos4@uol.com.br"
   },
   "q_004": {
-    "sql": "SELECT MediaType.Name, COUNT(*) AS TrackCount\nFROM Track\nJOIN MediaType ON Track.MediaTypeId = MediaType.MediaTypeId\nGROUP BY MediaType.MediaTypeId\nORDER BY TrackCount DESC\nLIMIT 1;",
+    "sql": "SELECT mt.Name, COUNT(*) AS TrackCount\nFROM Track t\nJOIN MediaType mt ON t.MediaTypeId = mt.MediaTypeId\nGROUP BY mt.MediaTypeId\nORDER BY TrackCount DESC\nLIMIT 1;",
     "answer": "Name: MPEG audio file, TrackCount: 3034"
   },
   "q_005": {

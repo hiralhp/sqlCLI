@@ -1,0 +1,253 @@
+[
+  {
+    "id": "live_001",
+    "question": "How many tracks are in the 'Rock' genre?",
+    "tier": 1,
+    "gold_sql": "SELECT COUNT(*) as TrackCount FROM Track t JOIN Genre g ON t.GenreId = g.GenreId WHERE g.Name = 'Rock'",
+    "gold_answer": "1,297 tracks",
+    "expected_result": [{"TrackCount": 1297}],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "FL"],
+    "join_complexity": "L2"
+  },
+  {
+    "id": "live_002",
+    "question": "What is the total revenue for each customer support representative?",
+    "tier": 2,
+    "gold_sql": "SELECT e.FirstName || ' ' || e.LastName as EmployeeName, SUM(i.Total) as TotalRevenue FROM Employee e JOIN Customer c ON e.EmployeeId = c.SupportRepId JOIN Invoice i ON c.CustomerId = i.CustomerId GROUP BY e.EmployeeId ORDER BY TotalRevenue DESC",
+    "gold_answer": "Jane Peacock ($1,731.51), Margaret Park ($1,584.00), Steve Johnson ($1,393.92)",
+    "expected_result": [
+      {"EmployeeName": "Jane Peacock", "TotalRevenue": 1731.51},
+      {"EmployeeName": "Margaret Park", "TotalRevenue": 1584.00},
+      {"EmployeeName": "Steve Johnson", "TotalRevenue": 1393.92}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "GA"],
+    "join_complexity": "L3"
+  },
+  {
+    "id": "live_003",
+    "question": "Which album has the most tracks, and how many tracks does it have?",
+    "tier": 2,
+    "gold_sql": "SELECT al.Title, COUNT(t.TrackId) as TrackCount FROM Album al JOIN Track t ON al.AlbumId = t.AlbumId GROUP BY al.AlbumId ORDER BY TrackCount DESC LIMIT 1",
+    "gold_answer": "Greatest Hits (57 tracks)",
+    "expected_result": [{"Title": "Greatest Hits", "TrackCount": 57}],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "GA", "NL"],
+    "join_complexity": "L2"
+  },
+  {
+    "id": "live_004",
+    "question": "For each genre, what is the average track length in milliseconds?",
+    "tier": 2,
+    "gold_sql": "SELECT g.Name, AVG(t.Milliseconds) as AvgLength FROM Genre g JOIN Track t ON g.GenreId = t.GenreId GROUP BY g.GenreId ORDER BY AvgLength DESC",
+    "gold_answer": "Various genres with average lengths ranging from ~200,000ms to ~400,000ms",
+    "expected_result": [
+      {"Name": "TV Shows", "AvgLength": 330391.0},
+      {"Name": "Sci Fi & Fantasy", "AvgLength": 312666.0},
+      {"Name": "Drama", "AvgLength": 311528.0}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "GA"],
+    "join_complexity": "L2"
+  },
+  {
+    "id": "live_005",
+    "question": "Which artists have no albums in the database?",
+    "tier": 3,
+    "gold_sql": "SELECT ar.Name FROM Artist ar LEFT JOIN Album al ON ar.ArtistId = al.ArtistId WHERE al.AlbumId IS NULL",
+    "gold_answer": "Several artists have no albums (e.g., Milton Nascimento, Antônio Carlos Jobim, Azymuth)",
+    "expected_result": [
+      {"Name": "Milton Nascimento"},
+      {"Name": "Antônio Carlos Jobim"},
+      {"Name": "Azymuth"}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "HL"],
+    "join_complexity": "L2"
+  },
+  {
+    "id": "live_006",
+    "question": "What is the total revenue per month in 2021, and which month had the highest revenue?",
+    "tier": 3,
+    "gold_sql": "SELECT strftime('%m', InvoiceDate) as Month, SUM(Total) as MonthlyRevenue FROM Invoice WHERE strftime('%Y', InvoiceDate) = '2021' GROUP BY Month ORDER BY MonthlyRevenue DESC",
+    "gold_answer": "Month 05 (May) had the highest revenue at $87.13",
+    "expected_result": [
+      {"Month": "05", "MonthlyRevenue": 87.13},
+      {"Month": "03", "MonthlyRevenue": 82.17},
+      {"Month": "04", "MonthlyRevenue": 76.23}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["DT", "GA"],
+    "join_complexity": "L1"
+  },
+  {
+    "id": "live_007",
+    "question": "How does the average invoice total differ between customers from the USA and customers from Canada?",
+    "tier": 2,
+    "gold_sql": "SELECT BillingCountry, AVG(Total) as AvgInvoice FROM Invoice WHERE BillingCountry IN ('USA', 'Canada') GROUP BY BillingCountry",
+    "gold_answer": "USA ($5.75), Canada ($5.43)",
+    "expected_result": [
+      {"BillingCountry": "USA", "AvgInvoice": 5.75},
+      {"BillingCountry": "Canada", "AvgInvoice": 5.43}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["FL", "GA"],
+    "join_complexity": "L1"
+  },
+  {
+    "id": "live_008",
+    "question": "Which playlist has the most unique tracks, and how many?",
+    "tier": 3,
+    "gold_sql": "SELECT p.Name, COUNT(DISTINCT pt.TrackId) as UniqueTrackCount FROM Playlist p JOIN PlaylistTrack pt ON p.PlaylistId = pt.PlaylistId GROUP BY p.PlaylistId ORDER BY UniqueTrackCount DESC LIMIT 1",
+    "gold_answer": "Music (3,290 unique tracks)",
+    "expected_result": [{"Name": "Music", "UniqueTrackCount": 3290}],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "GA"],
+    "join_complexity": "L3"
+  },
+  {
+    "id": "live_009",
+    "question": "Which artists have tracks in the 'Jazz' genre but no tracks in the 'Rock' genre?",
+    "tier": 3,
+    "gold_sql": "SELECT ar.Name FROM Artist ar WHERE EXISTS (SELECT 1 FROM Track t JOIN Genre g ON t.GenreId = g.GenreId JOIN Album al ON t.AlbumId = al.AlbumId WHERE al.ArtistId = ar.ArtistId AND g.Name = 'Jazz') AND NOT EXISTS (SELECT 1 FROM Track t2 JOIN Genre g2 ON t2.GenreId = g2.GenreId JOIN Album al2 ON t2.AlbumId = al2.AlbumId WHERE al2.ArtistId = ar.ArtistId AND g2.Name = 'Rock')",
+    "gold_answer": "Antônio Carlos Jobim, Billy Cobham, Gilberto Gil, Spyro Gyra, Miles Davis, Gene Krupa, Dennis Chambers, Incognito, Aisha Duo, Aaron Goldberg",
+    "expected_result": [
+      {"Name": "Antônio Carlos Jobim"},
+      {"Name": "Billy Cobham"},
+      {"Name": "Gilberto Gil"},
+      {"Name": "Spyro Gyra"},
+      {"Name": "Miles Davis"},
+      {"Name": "Gene Krupa"},
+      {"Name": "Dennis Chambers"},
+      {"Name": "Incognito"},
+      {"Name": "Aisha Duo"},
+      {"Name": "Aaron Goldberg"}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "NL", "SI"],
+    "join_complexity": "L4"
+  },
+  {
+    "id": "live_010",
+    "question": "For each customer, list their top 3 genres by total spending",
+    "tier": 3,
+    "gold_sql": "WITH CustomerGenreSpending AS (SELECT c.CustomerId, c.FirstName || ' ' || c.LastName as CustomerName, g.Name as Genre, SUM(il.UnitPrice * il.Quantity) as TotalSpent, ROW_NUMBER() OVER (PARTITION BY c.CustomerId ORDER BY SUM(il.UnitPrice * il.Quantity) DESC) as rn FROM Customer c JOIN Invoice i ON c.CustomerId = i.CustomerId JOIN InvoiceLine il ON i.InvoiceId = il.InvoiceId JOIN Track t ON il.TrackId = t.TrackId JOIN Genre g ON t.GenreId = g.GenreId GROUP BY c.CustomerId, g.GenreId) SELECT CustomerName, Genre, TotalSpent FROM CustomerGenreSpending WHERE rn <= 3 ORDER BY CustomerName, TotalSpent DESC",
+    "gold_answer": "Per-customer top 3 genres by spending (e.g., Aaron Mitchell: Latin $13.86, Rock $8.91, Metal $6.93)",
+    "expected_result": [
+      {"CustomerName": "Aaron Mitchell", "Genre": "Latin", "TotalSpent": 13.86},
+      {"CustomerName": "Aaron Mitchell", "Genre": "Rock", "TotalSpent": 8.91},
+      {"CustomerName": "Aaron Mitchell", "Genre": "Metal", "TotalSpent": 6.93},
+      {"CustomerName": "Alexandre Rocha", "Genre": "Latin", "TotalSpent": 15.84},
+      {"CustomerName": "Alexandre Rocha", "Genre": "Rock", "TotalSpent": 10.89},
+      {"CustomerName": "Alexandre Rocha", "Genre": "Alternative & Punk", "TotalSpent": 3.96}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "NL", "GA"],
+    "join_complexity": "L5"
+  },
+  {
+    "id": "live_011",
+    "question": "Which playlists contain tracks from more than 5 different artists?",
+    "tier": 2,
+    "gold_sql": "SELECT p.Name, COUNT(DISTINCT ar.ArtistId) as ArtistCount FROM Playlist p JOIN PlaylistTrack pt ON p.PlaylistId = pt.PlaylistId JOIN Track t ON pt.TrackId = t.TrackId JOIN Album al ON t.AlbumId = al.AlbumId JOIN Artist ar ON al.ArtistId = ar.ArtistId GROUP BY p.PlaylistId, p.Name HAVING ArtistCount > 5 ORDER BY ArtistCount DESC",
+    "gold_answer": "Music (198), 90's Music (109), Classical (67), Classical 101 - Deep Cuts (25), Classical 101 - The Basics (25), Classical 101 - Next Steps (23), Brazilian Music (12), Heavy Metal Classic (9), TV Shows (6), TV Shows (6), Grunge (6)",
+    "expected_result": [
+      {"Name": "Music", "ArtistCount": 198},
+      {"Name": "90's Music", "ArtistCount": 109},
+      {"Name": "Classical", "ArtistCount": 67},
+      {"Name": "Classical 101 - Deep Cuts", "ArtistCount": 25},
+      {"Name": "Classical 101 - The Basics", "ArtistCount": 25},
+      {"Name": "Classical 101 - Next Steps", "ArtistCount": 23},
+      {"Name": "Brazilian Music", "ArtistCount": 12},
+      {"Name": "Heavy Metal Classic", "ArtistCount": 9},
+      {"Name": "TV Shows", "ArtistCount": 6},
+      {"Name": "Grunge", "ArtistCount": 6}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "GA"],
+    "join_complexity": "L3"
+  },
+  {
+    "id": "live_012",
+    "question": "Total revenue by artist, including artists with $0 revenue",
+    "tier": 3,
+    "gold_sql": "SELECT ar.Name as ArtistName, COALESCE(SUM(il.UnitPrice * il.Quantity), 0) as TotalRevenue FROM Artist ar LEFT JOIN Album al ON ar.ArtistId = al.ArtistId LEFT JOIN Track t ON al.AlbumId = t.AlbumId LEFT JOIN InvoiceLine il ON t.TrackId = il.TrackId GROUP BY ar.ArtistId, ar.Name ORDER BY TotalRevenue DESC",
+    "gold_answer": "Iron Maiden ($138.60), U2 ($105.93), Metallica ($90.09), Led Zeppelin ($86.13), Lost ($81.59) ... plus many artists at $0",
+    "expected_result": [
+      {"ArtistName": "Iron Maiden", "TotalRevenue": 138.6},
+      {"ArtistName": "U2", "TotalRevenue": 105.93},
+      {"ArtistName": "Metallica", "TotalRevenue": 90.09},
+      {"ArtistName": "Led Zeppelin", "TotalRevenue": 86.13},
+      {"ArtistName": "Lost", "TotalRevenue": 81.59}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "NH", "GA"],
+    "join_complexity": "L4"
+  },
+  {
+    "id": "live_013",
+    "question": "Which customers have purchased tracks from every genre that 'AC/DC' has tracks in?",
+    "tier": 3,
+    "gold_sql": "WITH acdc_genres AS (SELECT DISTINCT g.GenreId FROM Genre g JOIN Track t ON g.GenreId = t.GenreId JOIN Album al ON t.AlbumId = al.AlbumId JOIN Artist ar ON al.ArtistId = ar.ArtistId WHERE ar.Name = 'AC/DC'), customer_genres AS (SELECT c.CustomerId, c.FirstName || ' ' || c.LastName as CustomerName, g.GenreId FROM Customer c JOIN Invoice i ON c.CustomerId = i.CustomerId JOIN InvoiceLine il ON i.InvoiceId = il.InvoiceId JOIN Track t ON il.TrackId = t.TrackId JOIN Genre g ON t.GenreId = g.GenreId GROUP BY c.CustomerId, g.GenreId) SELECT cg.CustomerName FROM customer_genres cg JOIN acdc_genres ag ON cg.GenreId = ag.GenreId GROUP BY cg.CustomerId, cg.CustomerName HAVING COUNT(DISTINCT cg.GenreId) = (SELECT COUNT(*) FROM acdc_genres)",
+    "gold_answer": "Luís Gonçalves, Leonie Köhler, François Tremblay, Bjørn Hansen, František Wichterlová, Helena Holý, Astrid Gruber, Daan Peeters, Kara Nielsen, Eduardo Martins (and more)",
+    "expected_result": [
+      {"CustomerName": "Luís Gonçalves"},
+      {"CustomerName": "Leonie Köhler"},
+      {"CustomerName": "François Tremblay"},
+      {"CustomerName": "Bjørn Hansen"},
+      {"CustomerName": "František Wichterlová"},
+      {"CustomerName": "Helena Holý"},
+      {"CustomerName": "Astrid Gruber"},
+      {"CustomerName": "Daan Peeters"},
+      {"CustomerName": "Kara Nielsen"},
+      {"CustomerName": "Eduardo Martins"}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "NL", "SI"],
+    "join_complexity": "L6"
+  },
+  {
+    "id": "live_014",
+    "question": "What is the month-over-month revenue growth rate for 2021?",
+    "tier": 3,
+    "gold_sql": "WITH monthly AS (SELECT strftime('%Y-%m', InvoiceDate) as Month, SUM(Total) as Revenue FROM Invoice WHERE strftime('%Y', InvoiceDate) = '2021' GROUP BY Month) SELECT Month, Revenue, CASE WHEN LAG(Revenue) OVER (ORDER BY Month) IS NULL THEN NULL WHEN LAG(Revenue) OVER (ORDER BY Month) = 0 THEN NULL ELSE ROUND(((Revenue - LAG(Revenue) OVER (ORDER BY Month)) * 100.0 / LAG(Revenue) OVER (ORDER BY Month)), 2) END as GrowthRate FROM monthly ORDER BY Month",
+    "gold_answer": "Jan: $35.64 (N/A), Feb: $37.62 (+5.56%), Mar-Dec: $37.62 (0.0%)",
+    "expected_result": [
+      {"Month": "2021-01", "Revenue": 35.64, "GrowthRate": null},
+      {"Month": "2021-02", "Revenue": 37.62, "GrowthRate": 5.56},
+      {"Month": "2021-03", "Revenue": 37.62, "GrowthRate": 0.0}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["NL", "DT", "GA"],
+    "join_complexity": "L4"
+  },
+  {
+    "id": "live_015",
+    "question": "Which support representative has the highest average invoice value for customers in their territory?",
+    "tier": 2,
+    "gold_sql": "SELECT e.FirstName || ' ' || e.LastName as EmployeeName, AVG(i.Total) as AvgInvoiceValue FROM Employee e JOIN Customer c ON e.EmployeeId = c.SupportRepId JOIN Invoice i ON c.CustomerId = i.CustomerId GROUP BY e.EmployeeId, e.FirstName, e.LastName ORDER BY AvgInvoiceValue DESC LIMIT 1",
+    "gold_answer": "Steve Johnson (avg $5.72)",
+    "expected_result": [
+      {"EmployeeName": "Steve Johnson", "AvgInvoiceValue": 5.7155555555555555}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "GA", "FL"],
+    "join_complexity": "L3"
+  },
+  {
+    "id": "live_016",
+    "question": "Which tracks appear in more playlists than the average track?",
+    "tier": 3,
+    "gold_sql": "WITH track_playlist_counts AS (SELECT t.TrackId, t.Name, COUNT(DISTINCT pt.PlaylistId) as PlaylistCount FROM Track t LEFT JOIN PlaylistTrack pt ON t.TrackId = pt.TrackId GROUP BY t.TrackId, t.Name), avg_playlists AS (SELECT AVG(PlaylistCount) as AvgCount FROM track_playlist_counts) SELECT tpc.Name, tpc.PlaylistCount FROM track_playlist_counts tpc, avg_playlists ap WHERE tpc.PlaylistCount > ap.AvgCount ORDER BY tpc.PlaylistCount DESC",
+    "gold_answer": "Classical tracks appearing in 5 playlists each (e.g., 'Intoitus: Adorate Deum', 'Miserere mei, Deus')",
+    "expected_result": [
+      {"Name": "Intoitus: Adorate Deum", "PlaylistCount": 5},
+      {"Name": "Miserere mei, Deus", "PlaylistCount": 5},
+      {"Name": "Aria Mit 30 Veränderungen, BWV 988 \"Goldberg Variations\": Aria", "PlaylistCount": 5}
+    ],
+    "evaluation": "sql_result_match",
+    "failure_modes": ["JN", "NL", "GA"],
+    "join_complexity": "L4"
+  }
+]
