@@ -12,7 +12,7 @@
     "answer": "FirstName: Lu\u00eds, LastName: Gon\u00e7alves, Email: luisg@embraer.com.br; FirstName: Eduardo, LastName: Martins, Email: eduardo@woodstock.com.br; FirstName: Alexandre, LastName: Rocha, Email: alero@uol.com.br; FirstName: Roberto, LastName: Almeida, Email: roberto.almeida@riotur.gov.br; FirstName: Fernanda, LastName: Ramos, Email: fernadaramos4@uol.com.br"
   },
   "q_004": {
-    "sql": "SELECT mt.Name, COUNT(*) AS TrackCount\nFROM Track t\nJOIN MediaType mt ON t.MediaTypeId = mt.MediaTypeId\nGROUP BY mt.MediaTypeId\nORDER BY TrackCount DESC\nLIMIT 1;",
+    "sql": "SELECT MediaType.Name, COUNT(*) AS TrackCount\nFROM Track\nJOIN MediaType ON Track.MediaTypeId = MediaType.MediaTypeId\nGROUP BY MediaType.MediaTypeId\nORDER BY TrackCount DESC\nLIMIT 1;",
     "answer": "Name: MPEG audio file, TrackCount: 3034"
   },
   "q_005": {
